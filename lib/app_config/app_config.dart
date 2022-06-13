@@ -6,9 +6,11 @@ import 'package:args/args.dart';
 class AppConfig {
   final int port;
   final String host;
+  final String dbPath;
   const AppConfig({
     required this.port,
     required this.host,
+    required this.dbPath,
   });
 
   factory AppConfig.fromArgs(List<String> args) {
@@ -41,11 +43,34 @@ class AppConfig {
       defaultsTo: '0.0.0.0',
       help: 'hostname to run the server on',
     );
+
+    parser.addOption(
+      'db-path',
+      abbr: 'd',
+      defaultsTo: 'clogger_db',
+      help: 'Path to the database',
+      callback: (dbAddr) {
+        if (dbAddr == null) {
+          return;
+        }
+        final dbAddrValue = Uri.tryParse(dbAddr);
+        if (dbAddrValue == null) {
+          print('db-path must be a valid URI');
+          print(parser.usage);
+          exit(64);
+        }
+        final dbDir = Directory.fromUri(dbAddrValue);
+        if (!dbDir.existsSync()) {
+          print("db-path is a valid directory but don't exists, tring to create it");
+          dbDir.createSync(recursive: true);
+        }
+      },
+    );
     try {
       final parsedData = parser.parse(args);
       if (!parsedData.wasParsed('host')) {
-        final addressess = NetworkInterface.list(type: InternetAddressType.IPv4);
-        addressess.then(
+        final addresses = NetworkInterface.list(type: InternetAddressType.IPv4);
+        addresses.then(
           (value) => print('''no custom hostname provided will use its default value (0.0.0.0)
 this address is open to lan and 
 can be used to access the server from other machines connected to the same router via:
@@ -59,31 +84,11 @@ ${value.map((e) => '${e.addresses.map((e) => e.address).join(' & ')} on ${e.name
       return AppConfig(
         port: int.parse(parsedData['port']),
         host: parsedData['host'],
+        dbPath: parsedData['db-path'],
       );
     } catch (e) {
       print(parser.usage);
       exit(64);
     }
   }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'port': port,
-      'host': host,
-    };
-  }
-
-  factory AppConfig.fromMap(Map<String, dynamic> map) {
-    return AppConfig(
-      port: map['port']?.toInt() ?? 8080,
-      host: map['host'] ?? '',
-    );
-  }
-
-  String toJson() => json.encode(toMap());
-
-  factory AppConfig.fromJson(String source) => AppConfig.fromMap(json.decode(source));
-
-  @override
-  String toString() => 'AppConfig(port: $port, host: $host)';
 }

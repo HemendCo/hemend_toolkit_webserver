@@ -10,7 +10,7 @@ import 'crashlytix_handler.dart';
 
 Future<HttpServer> setupWebServer(AppConfig appConfig) async {
   var app = Router();
-  await CrashlytixHandler.initDb();
+  await CrashlytixHandler.initDb(appConfig);
   app.post('/crashlytix/log', (
     Request request,
   ) async {
