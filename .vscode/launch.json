@@ -8,7 +8,10 @@
             "name": "example_web_server",
             "request": "launch",
             "type": "dart",
-            "program": "bin/main.dart"
+            "program": "bin/main.dart",
+            "args": [
+                "--port=8082"
+            ]
         }
     ]
 }
