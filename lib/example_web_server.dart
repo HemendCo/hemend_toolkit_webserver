@@ -2,28 +2,55 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:example_web_server/app_config/app_config.dart';
-import 'package:shelf/shelf.dart' show Request, Response;
 import 'package:shelf/shelf_io.dart' as io show serve;
-import 'package:shelf_router/shelf_router.dart' show Router;
+import 'package:shelf_multipart/form_data.dart';
+import 'package:shelf_plus/shelf_plus.dart';
 
 import 'crashlytix_handler.dart';
 
 Future<HttpServer> setupWebServer(AppConfig appConfig) async {
-  var app = Router();
+  var app = Router().plus;
   await CrashlytixHandler.initDb(appConfig);
+  app.post('/upload/<path>', (Request req, String path) async {
+    final recordedFiles = <String>[];
+    print(req);
+    await for (final part in req.multipartFormData) {
+      if (part.filename != null) {
+        Directory('files/$path/').createSync(recursive: true);
+        File('files/$path/${part.filename}').writeAsBytesSync(await part.part.readBytes());
+        recordedFiles.add('files/$path/${part.filename}');
+      }
+    }
+    return Response.ok({
+      'status': 'ok',
+      'path': recordedFiles,
+    }.toString());
+  });
+  app.get('/files/<path>/<fileName>', (Request request, String path, String fileName) {
+    final file = File('files/$path/$fileName');
+    if (!file.existsSync()) {
+      return Response.notFound('File not found');
+    }
+    return file.readAsBytesSync();
+  });
   app.post('/crashlytix/log', (
     Request request,
   ) async {
     print('Post Request: /crashlytix/log');
-    final bodyJson = Uri.decodeFull(await request.readAsString()).replaceFirst('data=', '').replaceAll('+', ' ');
+    final bodyString = await request.readAsString();
+    print('unformatted string $bodyString');
+    final bodyJson = jsonDecode(bodyString)['data'];
     print('body: $bodyJson');
-    final body = json.decode(bodyJson);
-    CrashlytixHandler.logData(body);
+    // final body = json.decode(bodyJson);
+    CrashlytixHandler.logData(bodyJson);
     return Response.ok({'status': 'ok'}.toString());
   });
   app.get('/crashlytix/log', (
     Request request,
   ) async {
+    if (request.url.queryParameters['type'] == 'json') {
+      return Response.ok(jsonEncode(CrashlytixHandler.getLogs()));
+    }
     print('Get Request: /crashlytix/log');
     final logs = CrashlytixHandler.getLogs();
 
@@ -43,10 +70,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
 String outputView(String json) {
   return '''
 <html lang="en">
-
 <head>
-
-
     <style>
         @import url("https://fonts.googleapis.com/css?family=Source+Code+Pro");
 
