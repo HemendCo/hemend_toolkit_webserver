@@ -48,11 +48,25 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
   app.get('/crashlytix/log', (
     Request request,
   ) async {
-    if (request.url.queryParameters['type'] == 'json') {
-      return Response.ok(jsonEncode(CrashlytixHandler.getLogs()));
-    }
+    final filters = (request.url.queryParameters['filters']?.split(',') ?? []).map(Uri.decodeFull).toList();
+    final filterType = request.url.queryParameters['filterType']?.toLowerCase();
+    final sortBy = request.url.queryParameters['sortBy'];
+    final sortType = request.url.queryParameters['sortType']?.toLowerCase() ?? 'asc';
+    final selectParams = (request.url.queryParameters['select']?.split(',') ?? []).map(Uri.decodeFull).toList();
+    final logs = CrashlytixHandler.getLogs(
+      filters: filters,
+      filterType: filterType,
+      sortBy: sortBy,
+      sortType: sortType,
+      select: selectParams,
+    );
+
     print('Get Request: /crashlytix/log');
-    final logs = CrashlytixHandler.getLogs();
+    if (request.url.queryParameters['type'] == 'json') {
+      return Response.ok(jsonEncode(logs));
+    }
+
+    // final logs = CrashlytixHandler.getLogs();
 
     return Response.ok(
       outputView(jsonEncode(logs)),
