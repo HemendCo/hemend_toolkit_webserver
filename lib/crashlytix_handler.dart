@@ -73,7 +73,6 @@ abstract class CrashlytixHandler {
     if (input.contains('!=')) {
       return '!=';
     }
-
     if (input.contains('>=')) {
       return '>=';
     }

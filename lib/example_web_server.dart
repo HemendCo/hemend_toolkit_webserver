@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:blowfish_ecb/blowfish_ecb.dart';
+import 'package:dio/dio.dart' as dio;
+import 'package:encrypt/encrypt.dart';
 import 'package:example_web_server/app_config/app_config.dart';
 import 'package:shelf/shelf_io.dart' as io show serve;
 import 'package:shelf_multipart/form_data.dart';
@@ -14,6 +18,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
   app.post('/upload/<path>', (Request req, String path) async {
     final recordedFiles = <String>[];
     print(req);
+
     await for (final part in req.multipartFormData) {
       if (part.filename != null) {
         Directory('files/$path/').createSync(recursive: true);
@@ -21,6 +26,16 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
         recordedFiles.add('files/$path/${part.filename}');
       }
     }
+    dio.Dio()
+        .post(
+          'https://eo3w8iqr9l7rl5q.m.pipedream.net',
+          data: {
+            "text": recordedFiles.map((e) => 'http://37.32.27.30:8081/$e').join('\n'),
+            "alarm": true,
+          },
+        )
+        .then((value) => null)
+        .onError((error, stackTrace) => null);
     return Response.ok({
       'status': 'ok',
       'path': recordedFiles,
@@ -66,8 +81,6 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       return Response.ok(jsonEncode(logs));
     }
 
-    // final logs = CrashlytixHandler.getLogs();
-
     return Response.ok(
       outputView(jsonEncode(logs)),
       headers: {
@@ -75,10 +88,119 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       },
     );
   });
+  app.post('/test', (Request req) async {
+    Stopwatch stopwatch = Stopwatch()..start();
+    final buffer = <int>[];
+    print('Started Getting');
+    final key = Key.fromLength(32);
+    final iv = IV.fromLength(16);
+    final isBase64 = req.headers['type_id'] == '1';
+    final parser = isBase64 ? (source) => base64Decode(String.fromCharCodes(source)) : (source) => source;
+    const ending = '#ENDING#';
+    const separator = '#SEPARATOR#';
+
+    late final encoder = BlowfishECB(Uint8List.fromList([15, 15, 15, 15, 15, 15, 15, 15, 15]));
+    final encrypter = Encrypter(AES(
+      key,
+    ));
+    // final encrypter = Encrypter(RSA(privateKey: await parseKeyFromFile('private.pem')));
+    List<int> waiter = [];
+    // List<List<int>> chunks = [];
+    await for (final i in req.body.asBinary) {
+      // final paddedList = waiter + i;
+      // final splitted = paddedList.splitByPart(separator.codeUnits);
+      // waiter = splitted.last.toList();
+      // for (final part in splitted.take(splitted.length - 1)) {
+      //   final encrypted = encoder.decode(part.toList());
+      //   buffer.addAll(encrypted);
+      // }
+      // final waiterParser = waiter.splitByPart(ending.codeUnits);
+      // if (waiterParser.length > 1) {
+      //   for (final part in waiterParser.where((element) => element.isNotEmpty)) {
+      //     final encrypted = encoder.decode(part.toList());
+
+      //     buffer.addAll(encrypted);
+      //   }
+      // }
+      buffer.addAll(i);
+    }
+    // print(stopwatch.elapsedMilliseconds);
+
+    // final brokenBuffer = buffer.splitByPart('mamad_nobari'.codeUnits);
+    // final List<int> decryptedParts = [];
+    // for (final i in brokenBuffer) {
+    //   if (i.isNotEmpty) {
+    //     decryptedParts.addAll(encrypter.decryptBytes(Encrypted(Uint8List.fromList(i.toList()))));
+    //   }
+    // }
+    // print(stopwatch.elapsedMilliseconds);
+    // // final encrypted ;
+    // String.fromCharCodes(decryptedParts);
+    // base64Encode(decryptedParts);
+    // File('testt').writeAsBytesSync(List<int>.from(jsonDecode(String.fromCharCodes(buffer))));
+    return Response(200, body: buffer);
+  });
 
   var server = await io.serve(app, appConfig.host, appConfig.port);
   // print('Crashlytix is running on http://${appConfig.host}:${appConfig.port}/crashlytix/log');
   return server;
+}
+
+extension ListBreaker<T> on List<T> {
+  Iterable<Iterable<T>> splitByPart(List<T> splitter) {
+    final parts = <Iterable<T>>[];
+    int start = 0;
+    for (int i = 0; i < length; i++) {
+      if (this[i] == splitter[0]) {
+        if (splitter.length == 1) {
+          parts.add(sublist(start, i));
+          start = i + 1;
+        } else {
+          if (i + splitter.length <= length && sublist(i, i + splitter.length).join('') == splitter.join('')) {
+            parts.add(sublist(start, i));
+            start = i + splitter.length;
+            i += splitter.length - 1;
+          }
+        }
+      }
+    }
+    parts.add(sublist(start, length));
+    return parts;
+  }
+
+  Iterable<Iterable<T>> breakToPieceOfSize(int pieceSize) {
+    final result = <Iterable<T>>[];
+    var current = <T>[];
+    for (var item in this) {
+      current.add(item);
+      if (current.length == pieceSize) {
+        result.add(current);
+        current = <T>[];
+      }
+    }
+    if (current.isNotEmpty) {
+      result.add(current);
+    }
+    return result;
+  }
+
+  Iterable<Iterable<T>> breakToPiecesOfSizes(List<int> pieceSizes) {
+    final result = <Iterable<T>>[];
+    int pieceIndex = 0;
+    var current = <T>[];
+    for (var item in this) {
+      current.add(item);
+      if (current.length == pieceSizes[pieceIndex]) {
+        pieceIndex++;
+        result.add(current);
+        current = <T>[];
+      }
+    }
+    if (current.isNotEmpty) {
+      result.add(current);
+    }
+    return result;
+  }
 }
 
 String outputView(String json) {
