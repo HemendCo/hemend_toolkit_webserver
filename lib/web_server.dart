@@ -13,11 +13,14 @@ import 'package:shelf_plus/shelf_plus.dart';
 import 'crashlytix_handler.dart';
 
 Future<HttpServer> setupWebServer(AppConfig appConfig) async {
+  // final ip = 'Debug';
+  print('initializing server');
+  final ip = (await dio.Dio().get('https://api.ipify.org?format=json')).data['ip'];
   var app = Router().plus;
   await CrashlytixHandler.initDb(appConfig);
   app.post('/upload/<path>', (Request req, String path) async {
     final recordedFiles = <String>[];
-    print(req);
+    print('file size: ${req.contentLength}');
 
     await for (final part in req.multipartFormData) {
       if (part.filename != null) {
@@ -26,11 +29,12 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
         recordedFiles.add('files/$path/${part.filename}');
       }
     }
+
     dio.Dio()
         .post(
           'https://eo3w8iqr9l7rl5q.m.pipedream.net',
           data: {
-            "text": recordedFiles.map((e) => 'http://37.32.27.30:8081/$e').join('\n'),
+            "text": recordedFiles.map((e) => 'http://$ip:${appConfig.port}/$e').join('\n'),
             "alarm": true,
           },
         )
@@ -41,8 +45,42 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       'path': recordedFiles,
     }.toString());
   });
+  app.get(
+    '/<path>/app/<appName>',
+    (Request request, String path, String appName) async {
+      final parent = Directory('files/$path/');
+      final nameMatcher =
+          RegExp((request.headers['parser'] ?? request.requestedUri.queryParameters['parser']).toString());
+      final List<Map<String, dynamic>> results = [];
+      await for (final item in parent.list(recursive: true)) {
+        if (item is File) {
+          final fileName = item.uri.pathSegments.last;
+          if (fileName.startsWith(appName)) {
+            final regexResult = nameMatcher.allMatches(fileName).toList();
+            if (regexResult.isNotEmpty) {
+              final match = regexResult.first;
+              final name = match.namedGroup('name');
+              final version = match.namedGroup('version');
+              results.add(
+                {
+                  'name': name,
+                  'version': version,
+                  'download_url': 'http://$ip:${appConfig.port}/files/$path/$fileName',
+                },
+              );
+            }
+          }
+        }
+      }
+      if (results.isNotEmpty) {
+        return Response.ok(jsonEncode(results));
+      }
+      return Response.notFound(jsonEncode({'error': 'nothing found'}));
+    },
+  );
   app.get('/files/<path>/<fileName>', (Request request, String path, String fileName) {
     final file = File('files/$path/$fileName');
+
     if (!file.existsSync()) {
       return Response.notFound('File not found');
     }
@@ -140,7 +178,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
     // File('testt').writeAsBytesSync(List<int>.from(jsonDecode(String.fromCharCodes(buffer))));
     return Response(200, body: buffer);
   });
-
+  print('starting to serve');
   var server = await io.serve(app, appConfig.host, appConfig.port);
   // print('Crashlytix is running on http://${appConfig.host}:${appConfig.port}/crashlytix/log');
   return server;

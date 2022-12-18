@@ -9,9 +9,7 @@
             "request": "launch",
             "type": "dart",
             "program": "bin/main.dart",
-            "args": [
-                "--port=8082"
-            ]
+            "args": []
         }
     ]
 }
