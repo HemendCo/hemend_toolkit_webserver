@@ -32,6 +32,7 @@ Future<void> initTickets(RouterPlus app) async {
           'sender': 'client',
           'id': ticketData['id'],
           'text': ticketData['text'],
+          'dateTime': DateTime.now().toUtc().millisecondsSinceEpoch,
         },
       );
       await client.post(
@@ -53,6 +54,7 @@ Future<void> initTickets(RouterPlus app) async {
           'sender': 'operator',
           'id': replyData['id'],
           'text': replyData['text'],
+          'dateTime': DateTime.now().toUtc().millisecondsSinceEpoch,
         },
       );
       return Response.ok('');
