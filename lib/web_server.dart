@@ -6,6 +6,8 @@ import 'package:blowfish_ecb/blowfish_ecb.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:encrypt/encrypt.dart';
 import 'package:example_web_server/app_config/app_config.dart';
+import 'package:example_web_server/db_toolkit.dart';
+import 'package:example_web_server/tickets_side.dart';
 import 'package:shelf/shelf_io.dart' as io show serve;
 import 'package:shelf_multipart/form_data.dart';
 import 'package:shelf_plus/shelf_plus.dart';
@@ -15,9 +17,13 @@ import 'crashlytix_handler.dart';
 Future<HttpServer> setupWebServer(AppConfig appConfig) async {
   // final ip = 'Debug';
   print('initializing server');
+
   final ip = (await dio.Dio().get('https://api.ipify.org?format=json')).data['ip'];
+  final serverUrl = appConfig.serverAddressOverride ?? 'http://$ip:${appConfig.port}';
   var app = Router().plus;
-  await CrashlytixHandler.initDb(appConfig);
+  DataBaseHandler.initHive(appConfig.dbPath);
+  await CrashlytixHandler.initDb();
+  await initTickets(app);
   app.post('/upload/<path>', (Request req, String path) async {
     final recordedFiles = <String>[];
     print('file size: ${req.contentLength}');
@@ -34,19 +40,21 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
         .post(
           'https://eo3w8iqr9l7rl5q.m.pipedream.net',
           data: {
-            "text": recordedFiles.map((e) => 'http://$ip:${appConfig.port}/$e').join('\n'),
+            "text": recordedFiles.map((e) => '$serverUrl/$e').join('\n'),
             "alarm": true,
           },
         )
         .then((value) => null)
         .onError((error, stackTrace) => null);
-    return Response.ok({
-      'status': 'ok',
-      'path': recordedFiles,
-    }.toString());
+    return Response.ok(
+      {
+        'status': 'ok',
+        'path': recordedFiles,
+      }.toString(),
+    );
   });
   app.get(
-    '/<path>/app/<appName>',
+    '/apps/<path>/<appName>',
     (Request request, String path, String appName) async {
       final parent = Directory('files/$path/');
       final nameMatcher =
@@ -65,7 +73,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
                 {
                   'name': name,
                   'version': version,
-                  'download_url': 'http://$ip:${appConfig.port}/files/$path/$fileName',
+                  'download_url': '$serverUrl/files/$path/$fileName',
                 },
               );
             }

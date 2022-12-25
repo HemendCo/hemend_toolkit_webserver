@@ -6,10 +6,12 @@ class AppConfig {
   final int port;
   final String host;
   final String dbPath;
+  final String? serverAddressOverride;
   const AppConfig({
     required this.port,
     required this.host,
     required this.dbPath,
+    required this.serverAddressOverride,
   });
 
   factory AppConfig.fromArgs(List<String> args) {
@@ -41,6 +43,11 @@ class AppConfig {
       abbr: 'h',
       defaultsTo: '0.0.0.0',
       help: 'hostname to run the server on',
+    );
+    parser.addOption(
+      'address-override',
+      abbr: 'a',
+      help: 'address Override',
     );
 
     parser.addOption(
@@ -83,6 +90,7 @@ ${value.map((e) => '${e.addresses.map((e) => e.address).join(' & ')} on ${e.name
       return AppConfig(
         port: int.parse(parsedData['port']),
         host: parsedData['host'],
+        serverAddressOverride: parsedData['address-override'],
         dbPath: parsedData['db-path'],
       );
     } catch (e) {
