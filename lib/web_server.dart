@@ -11,6 +11,7 @@ import 'package:example_web_server/tickets_side.dart';
 import 'package:shelf/shelf_io.dart' as io show serve;
 import 'package:shelf_multipart/form_data.dart';
 import 'package:shelf_plus/shelf_plus.dart';
+import 'package:shelf_plus/shelf_plus.dart' as plus;
 
 import 'crashlytix_handler.dart';
 
@@ -93,6 +94,23 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       return Response.notFound('File not found');
     }
     return file.readAsBytesSync();
+  });
+  app.get('/images/<path>/<fileName>', (Request request, String path, String fileName) {
+    final file = File('files/$path/$fileName');
+
+    if (!file.existsSync()) {
+      return Response.notFound('File not found');
+    }
+
+    final data = file.readAsBytesSync();
+
+    return plus.Response.ok(
+      data,
+      headers: {
+        'Content-Length': data.length.toString(),
+        'Content-Type': 'image/png',
+      },
+    );
   });
   app.post('/crashlytix/log', (
     Request request,
