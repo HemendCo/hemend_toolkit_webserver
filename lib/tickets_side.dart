@@ -9,11 +9,11 @@ import 'package:dio/dio.dart' as dio;
 
 const _hookAddress = 'https://eo2znn8ui16eecf.m.pipedream.net';
 Future<String> _recordFile(String id, String name, Uint8List data) async {
-  final fileName = 'files/$id/${DateTime.now().toIso8601String()}-$name.png';
-  final file = File(fileName);
+  final fileName = '$id/${DateTime.now().toIso8601String()}-$name.png';
+  final file = File('files/$fileName');
   await file.create(recursive: true);
   await file.writeAsBytes(data);
-  return fileName;
+  return 'images/$fileName';
 }
 
 Future<void> initTickets(RouterPlus app, String baseServerAddress) async {
@@ -44,7 +44,7 @@ Future<void> initTickets(RouterPlus app, String baseServerAddress) async {
         if (field.name.startsWith('asset')) {
           filesArray[field.name] = await field.part.readBytes();
         } else {
-          formInfo[field.name] = String.fromCharCodes(await field.part.readBytes());
+          formInfo[field.name] = Utf8Decoder().convert(await field.part.readBytes());
         }
       }
       if (formInfo['id'] == null) {
