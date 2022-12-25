@@ -23,7 +23,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
   var app = Router().plus;
   DataBaseHandler.initHive(appConfig.dbPath);
   await CrashlytixHandler.initDb();
-  await initTickets(app);
+  await initTickets(app, serverUrl);
   app.post('/upload/<path>', (Request req, String path) async {
     final recordedFiles = <String>[];
     print('file size: ${req.contentLength}');

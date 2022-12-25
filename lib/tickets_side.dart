@@ -9,13 +9,14 @@ import 'package:dio/dio.dart' as dio;
 
 const _hookAddress = 'https://eo2znn8ui16eecf.m.pipedream.net';
 Future<String> _recordFile(String id, String name, Uint8List data) async {
-  final file = File('files/$id/${DateTime.now().toIso8601String()}-$name.png');
+  final fileName = 'files/$id/${DateTime.now().toIso8601String()}-$name.png';
+  final file = File(fileName);
   await file.create(recursive: true);
   await file.writeAsBytes(data);
-  return file.path;
+  return fileName;
 }
 
-Future<void> initTickets(RouterPlus app) async {
+Future<void> initTickets(RouterPlus app, String baseServerAddress) async {
   final ticketsBox = await DataBaseHandler.ticketsDb();
   final client = dio.Dio(dio.BaseOptions(baseUrl: _hookAddress));
   app.get(
@@ -57,7 +58,7 @@ Future<void> initTickets(RouterPlus app) async {
         );
         formInfo['assets'] = [
           ...formInfo['assets'],
-          fileName,
+          '$baseServerAddress/$fileName',
         ];
       }
       await ticketsBox.add(
@@ -69,13 +70,14 @@ Future<void> initTickets(RouterPlus app) async {
           'dateTime': DateTime.now().toUtc().millisecondsSinceEpoch,
         },
       );
-      // await client.post(
-      //   '/',
-      //   data: {
-      //     'id': ticketData['id'],
-      //     'text': ticketData['text'],
-      //   },
-      // );
+      await client.post(
+        '/',
+        data: {
+          'id': formInfo['id'],
+          'text': formInfo['text'],
+          'assets': formInfo['assets'],
+        },
+      );
       return Response.ok('');
     },
   );
