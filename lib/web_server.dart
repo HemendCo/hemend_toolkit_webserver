@@ -12,6 +12,8 @@ import 'package:shelf/shelf_io.dart' as io show serve;
 import 'package:shelf_multipart/form_data.dart';
 import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shelf_plus/shelf_plus.dart' as plus;
+import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid_util.dart';
 
 import 'crashlytix_handler.dart';
 
@@ -123,6 +125,22 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
     // final body = json.decode(bodyJson);
     CrashlytixHandler.logData(bodyJson);
     return Response.ok({'status': 'ok'}.toString());
+  });
+  app.post('/records/log', (
+    Request request,
+  ) async {
+    print('Post Request: /records/log');
+    final bodyString = await request.readAsString();
+    print('unformatted string $bodyString');
+    final unique = Uuid().v1();
+    final time = DateTime.now().millisecondsSinceEpoch;
+    final file = File('raws/$time-$unique.json');
+    file.createSync(recursive: true);
+    await file.writeAsString(bodyString);
+    return Response.ok({
+      'status': 'ok',
+      'path': file.uri.pathSegments.last,
+    }.toString());
   });
   app.get('/crashlytix/log', (
     Request request,
