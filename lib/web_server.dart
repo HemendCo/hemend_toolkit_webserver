@@ -137,10 +137,10 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
     final file = File('raws/$time-$unique.json');
     file.createSync(recursive: true);
     await file.writeAsString(bodyString);
-    return Response.ok({
+    return Response.ok(jsonEncode({
       'status': 'ok',
       'path': file.uri.pathSegments.last,
-    }.toString());
+    }));
   });
   app.get('/crashlytix/log', (
     Request request,
