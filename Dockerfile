@@ -1,5 +1,5 @@
 FROM alpine:latest
 
-COPY hem_server /
+COPY server /usr/local/bin/
 
-CMD ["/hem_server"]
+CMD ["server"]
