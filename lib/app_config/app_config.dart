@@ -6,20 +6,27 @@ class AppConfig {
   final int port;
   final String host;
   final String dbPath;
+  final String baseRoute;
   final String? serverAddressOverride;
   const AppConfig({
     required this.port,
     required this.host,
     required this.dbPath,
+    required this.baseRoute,
     required this.serverAddressOverride,
   });
 
   factory AppConfig.fromArgs(List<String> args) {
     var parser = ArgParser();
     parser.addOption(
+      'base-path',
+      defaultsTo: Platform.environment['HEM_PATH'] ?? '/',
+    );
+
+    parser.addOption(
       'port',
       abbr: 'p',
-      defaultsTo: '8081',
+      defaultsTo: Platform.environment['HEM_PORT'] ?? '8081',
       help: 'Port to run the server on',
       callback: (port) {
         if (port == null) {
@@ -41,19 +48,20 @@ class AppConfig {
     parser.addOption(
       'host',
       abbr: 'h',
-      defaultsTo: '0.0.0.0',
+      defaultsTo: Platform.environment['HEM_ADDRESS'] ?? '0.0.0.0',
       help: 'hostname to run the server on',
     );
     parser.addOption(
       'address-override',
       abbr: 'a',
       help: 'address Override',
+      defaultsTo: Platform.environment['HEM_URL'],
     );
 
     parser.addOption(
       'db-path',
       abbr: 'd',
-      defaultsTo: 'clogger_db',
+      defaultsTo: Platform.environment['HEM_DB_PATH'] ?? 'clogger_db',
       help: 'Path to the database',
       callback: (dbAddr) {
         if (dbAddr == null) {
@@ -90,6 +98,7 @@ ${value.map((e) => '${e.addresses.map((e) => e.address).join(' & ')} on ${e.name
       return AppConfig(
         port: int.parse(parsedData['port']),
         host: parsedData['host'],
+        baseRoute: parsedData['base-path'],
         serverAddressOverride: parsedData['address-override'],
         dbPath: parsedData['db-path'],
       );

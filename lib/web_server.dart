@@ -1,10 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:blowfish_ecb/blowfish_ecb.dart';
 import 'package:dio/dio.dart' as dio;
-import 'package:encrypt/encrypt.dart';
 import 'package:example_web_server/app_config/app_config.dart';
 import 'package:example_web_server/db_toolkit.dart';
 import 'package:example_web_server/tickets_side.dart';
@@ -13,7 +10,6 @@ import 'package:shelf_multipart/form_data.dart';
 import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shelf_plus/shelf_plus.dart' as plus;
 import 'package:uuid/uuid.dart';
-import 'package:uuid/uuid_util.dart';
 
 import 'crashlytix_handler.dart';
 
@@ -23,11 +19,13 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
 
   final ip = (await dio.Dio().get('https://api.ipify.org?format=json')).data['ip'];
   final serverUrl = appConfig.serverAddressOverride ?? 'http://$ip:${appConfig.port}';
+  final serverPref = appConfig.baseRoute;
+
   var app = Router().plus;
   DataBaseHandler.initHive(appConfig.dbPath);
   await CrashlytixHandler.initDb();
   await initTickets(app, serverUrl);
-  app.post('/upload/<path>', (Request req, String path) async {
+  app.post('${serverPref}upload/<path>', (Request req, String path) async {
     final recordedFiles = <String>[];
     print('file size: ${req.contentLength}');
 
@@ -57,7 +55,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
     );
   });
   app.get(
-    '/apps/<path>/<appName>',
+    '${serverPref}apps/<path>/<appName>',
     (Request request, String path, String appName) async {
       final parent = Directory('files/$path/');
       final nameMatcher =
@@ -89,7 +87,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       return Response.notFound(jsonEncode({'error': 'nothing found'}));
     },
   );
-  app.get('/files/<path>/<fileName>', (Request request, String path, String fileName) {
+  app.get('${serverPref}files/<path>/<fileName>', (Request request, String path, String fileName) {
     final file = File('files/$path/$fileName');
 
     if (!file.existsSync()) {
@@ -97,7 +95,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
     }
     return file.readAsBytesSync();
   });
-  app.get('/images/<path>/<fileName>', (Request request, String path, String fileName) {
+  app.get('${serverPref}images/<path>/<fileName>', (Request request, String path, String fileName) {
     final file = File('files/$path/$fileName');
 
     if (!file.existsSync()) {
@@ -114,7 +112,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       },
     );
   });
-  app.post('/crashlytix/log', (
+  app.post('${serverPref}crashlytix/log', (
     Request request,
   ) async {
     print('Post Request: /crashlytix/log');
@@ -126,7 +124,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
     CrashlytixHandler.logData(bodyJson);
     return Response.ok({'status': 'ok'}.toString());
   });
-  app.post('/records/log', (
+  app.post('${serverPref}records/log', (
     Request request,
   ) async {
     print('Post Request: /records/log');
@@ -142,7 +140,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       'path': file.uri.pathSegments.last,
     }));
   });
-  app.get('/crashlytix/log', (
+  app.get('${serverPref}crashlytix/log', (
     Request request,
   ) async {
     final filters = (request.url.queryParameters['filters']?.split(',') ?? []).map(Uri.decodeFull).toList();
@@ -170,58 +168,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       },
     );
   });
-  app.post('/test', (Request req) async {
-    Stopwatch stopwatch = Stopwatch()..start();
-    final buffer = <int>[];
-    print('Started Getting');
-    final key = Key.fromLength(32);
-    final iv = IV.fromLength(16);
-    final isBase64 = req.headers['type_id'] == '1';
-    final parser = isBase64 ? (source) => base64Decode(String.fromCharCodes(source)) : (source) => source;
-    const ending = '#ENDING#';
-    const separator = '#SEPARATOR#';
 
-    late final encoder = BlowfishECB(Uint8List.fromList([15, 15, 15, 15, 15, 15, 15, 15, 15]));
-    final encrypter = Encrypter(AES(
-      key,
-    ));
-    // final encrypter = Encrypter(RSA(privateKey: await parseKeyFromFile('private.pem')));
-    List<int> waiter = [];
-    // List<List<int>> chunks = [];
-    await for (final i in req.body.asBinary) {
-      // final paddedList = waiter + i;
-      // final splitted = paddedList.splitByPart(separator.codeUnits);
-      // waiter = splitted.last.toList();
-      // for (final part in splitted.take(splitted.length - 1)) {
-      //   final encrypted = encoder.decode(part.toList());
-      //   buffer.addAll(encrypted);
-      // }
-      // final waiterParser = waiter.splitByPart(ending.codeUnits);
-      // if (waiterParser.length > 1) {
-      //   for (final part in waiterParser.where((element) => element.isNotEmpty)) {
-      //     final encrypted = encoder.decode(part.toList());
-
-      //     buffer.addAll(encrypted);
-      //   }
-      // }
-      buffer.addAll(i);
-    }
-    // print(stopwatch.elapsedMilliseconds);
-
-    // final brokenBuffer = buffer.splitByPart('mamad_nobari'.codeUnits);
-    // final List<int> decryptedParts = [];
-    // for (final i in brokenBuffer) {
-    //   if (i.isNotEmpty) {
-    //     decryptedParts.addAll(encrypter.decryptBytes(Encrypted(Uint8List.fromList(i.toList()))));
-    //   }
-    // }
-    // print(stopwatch.elapsedMilliseconds);
-    // // final encrypted ;
-    // String.fromCharCodes(decryptedParts);
-    // base64Encode(decryptedParts);
-    // File('testt').writeAsBytesSync(List<int>.from(jsonDecode(String.fromCharCodes(buffer))));
-    return Response(200, body: buffer);
-  });
   print('starting to serve');
   var server = await io.serve(app, appConfig.host, appConfig.port);
   // print('Crashlytix is running on http://${appConfig.host}:${appConfig.port}/crashlytix/log');
