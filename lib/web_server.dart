@@ -17,8 +17,8 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
   // final ip = 'Debug';
   print('initializing server');
 
-  final ip = (await dio.Dio().get('https://api.ipify.org?format=json')).data['ip'];
-  final serverUrl = appConfig.serverAddressOverride ?? 'http://$ip:${appConfig.port}';
+  final serverUrl = appConfig.serverAddressOverride ??
+      'http://${(await dio.Dio().get('https://api.ipify.org?format=json')).data['ip']}:${appConfig.port}';
   final serverPref = appConfig.baseRoute;
 
   var app = Router().plus;
