@@ -17,16 +17,17 @@ Future<String> _recordFile(String id, String name, Uint8List data) async {
 }
 
 Future<void> initTickets(RouterPlus app, String baseServerAddress) async {
-  final ticketsBox = await DataBaseHandler.ticketsDb();
+  final ticketsBox = DataBaseHandler.ticketsDb();
   final client = dio.Dio(dio.BaseOptions(baseUrl: _hookAddress));
   app.get(
     '/tickets/getAll',
-    (Request request) {
+    (Request request) async {
       final id = request.headers['id'];
       if (id == null) {
         return Response.notFound('');
       }
-      final tickets = ticketsBox.values
+      final tickets = await ticketsBox
+          .getValues()
           .where(
             (element) => element['id'] == id,
           )

@@ -3,23 +3,23 @@ import 'package:hive/hive.dart';
 import 'db_toolkit.dart';
 
 abstract class CrashlytixHandler {
-  static late Box<Map> db;
+  static late LazyBox<Map> db;
   static Future<void> initDb() async {
-    db = await DataBaseHandler.initCrashlytixDb();
+    db = DataBaseHandler.initCrashlytixDb();
   }
 
   static Future<void> logData(Map data) async {
     db.add(data);
   }
 
-  static List<Map> getLogs({
+  static Future<List<Map>> getLogs({
     List<String> filters = const [],
     String? filterType,
     String? sortBy,
     String? sortType,
     List<String> select = const [],
-  }) {
-    final logs = List<Map>.from(db.values);
+  }) async {
+    final logs = List<Map>.from(await db.getValues().toList());
     final filterResult = _filterLogs(logs, filters, filterType ?? 'and');
     final sortResult = _sortWith(filterResult, sortBy, sortType);
     final selectResult = _selectFrom(sortResult, select);

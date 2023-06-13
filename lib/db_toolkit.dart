@@ -5,11 +5,22 @@ abstract class DataBaseHandler {
     Hive.init(path);
   }
 
-  static Future<Box<Map>> initCrashlytixDb() {
-    return Hive.openBox<Map>('crashlytix_logs');
+  static LazyBox<Map> initCrashlytixDb() {
+    return Hive.lazyBox<Map>('crashlytix_logs');
   }
 
-  static Future<Box<Map>> ticketsDb() {
-    return Hive.openBox<Map>('tickets_db');
+  static LazyBox<Map> ticketsDb() {
+    return Hive.lazyBox<Map>('tickets_db');
+  }
+}
+
+extension BoxMap<T> on LazyBox<T> {
+  Stream<T> getValues() async* {
+    for (final i in keys) {
+      final data = await get(i);
+      if (data != null) {
+        yield data;
+      }
+    }
   }
 }
