@@ -17,7 +17,7 @@ Future<String> _recordFile(String id, String name, Uint8List data) async {
 }
 
 Future<void> initTickets(RouterPlus app, String baseServerAddress) async {
-  final ticketsBox = DataBaseHandler.ticketsDb();
+  final ticketsBox = await DataBaseHandler.ticketsDb();
   final client = dio.Dio(dio.BaseOptions(baseUrl: _hookAddress));
   app.get(
     '/tickets/getAll',

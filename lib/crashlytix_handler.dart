@@ -5,7 +5,7 @@ import 'db_toolkit.dart';
 abstract class CrashlytixHandler {
   static late LazyBox<Map> db;
   static Future<void> initDb() async {
-    db = DataBaseHandler.initCrashlytixDb();
+    db = await DataBaseHandler.initCrashlytixDb();
   }
 
   static Future<void> logData(Map data) async {
