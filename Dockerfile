@@ -1,7 +1,14 @@
-FROM alpine:latest
+# Build stage
 
-USER root
+FROM ubuntu:latest AS builder
+WORKDIR /build
+COPY server /build/server
+RUN chmod +x /build/server
 
-COPY server /usr/local/bin/
-RUN chmod a+x /usr/local/bin/server
-CMD ["server"]
+# Runtime stage
+
+FROM ubuntu:latest
+WORKDIR /
+COPY --from=builder /build/server /server
+RUN chmod +x /server
+CMD ["/server"]
