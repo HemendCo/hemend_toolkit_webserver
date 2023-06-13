@@ -38,23 +38,21 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       }
     }
 
-    unawaited(
-      dio.Dio()
-          .post(
-            'https://eo3w8iqr9l7rl5q.m.pipedream.net',
-            data: {
-              "text": recordedFiles.map((e) => '$serverUrl/$e').join('\n'),
-              "alarm": true,
-            },
-          )
-          .then((value) => print(value.data))
-          .onError<dio.DioError>(
-            (error, stackTrace) => print('error response: ${error.response?.data} ${error.error}'),
-          )
-          .onError(
-            (error, stackTrace) => print('sending to telegram error: $error'),
-          ),
-    );
+    await dio.Dio()
+        .post(
+          'https://eo3w8iqr9l7rl5q.m.pipedream.net',
+          data: {
+            "text": recordedFiles.map((e) => '$serverUrl/$e').join('\n'),
+            "alarm": true,
+          },
+        )
+        .then((value) => print(value.data))
+        .onError<dio.DioError>(
+          (error, stackTrace) => print('error response: ${error.response?.data} ${error.error}'),
+        )
+        .onError(
+          (error, stackTrace) => print('sending to telegram error: $error'),
+        );
     return Response.ok(
       {
         'status': 'ok',
