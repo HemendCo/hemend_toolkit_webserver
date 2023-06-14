@@ -38,7 +38,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
       }
     }
 
-    await dio.Dio()
+    unawaited(dio.Dio()
         .post(
           'https://eo3w8iqr9l7rl5q.m.pipedream.net',
           data: {
@@ -52,7 +52,7 @@ Future<HttpServer> setupWebServer(AppConfig appConfig) async {
         )
         .onError(
           (error, stackTrace) => print('sending to telegram error: $error'),
-        );
+        ));
     return Response.ok(
       {
         'status': 'ok',
